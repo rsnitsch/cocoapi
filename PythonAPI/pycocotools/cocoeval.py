@@ -2,10 +2,13 @@ __author__ = 'tsungyi'
 
 import numpy as np
 import datetime
+import logging
 import time
 from collections import defaultdict
 from . import mask as maskUtils
 import copy
+
+logger = logging.getLogger(__name__)
 
 class COCOeval:
     # Interface for evaluating detection on the Microsoft COCO dataset.
@@ -65,7 +68,7 @@ class COCOeval:
         :return: None
         '''
         if not iouType:
-            print('iouType not specified. use default iouType segm')
+            logger.warning('iouType not specified. use default iouType segm')
         self.cocoGt   = cocoGt              # ground truth COCO API
         self.cocoDt   = cocoDt              # detections COCO API
         self.evalImgs = defaultdict(list)   # per-image per-category evaluation results [KxAxI] elements
@@ -124,13 +127,13 @@ class COCOeval:
         :return: None
         '''
         tic = time.time()
-        print('Running per image evaluation...')
+        logger.info('Running per image evaluation...')
         p = self.params
         # add backward compatibility if useSegm is specified in params
         if not p.useSegm is None:
             p.iouType = 'segm' if p.useSegm == 1 else 'bbox'
-            print('useSegm (deprecated) is not None. Running {} evaluation'.format(p.iouType))
-        print('Evaluate annotation type *{}*'.format(p.iouType))
+            logger.warning('useSegm (deprecated) is not None. Running %s evaluation', p.iouType)
+        logger.info('Evaluate annotation type *%s*', p.iouType)
         p.imgIds = list(np.unique(p.imgIds))
         if p.useCats:
             p.catIds = list(np.unique(p.catIds))
@@ -158,7 +161,7 @@ class COCOeval:
              ]
         self._paramsEval = copy.deepcopy(self.params)
         toc = time.time()
-        print('DONE (t={:0.2f}s).'.format(toc-tic))
+        logger.info('DONE (t=%0.2fs).', toc-tic)
 
     def computeIoU(self, imgId, catId):
         p = self.params
@@ -318,10 +321,10 @@ class COCOeval:
         :param p: input params for evaluation
         :return: None
         '''
-        print('Accumulating evaluation results...')
+        logger.info('Accumulating evaluation results...')
         tic = time.time()
         if not self.evalImgs:
-            print('Please run evaluate() first')
+            logger.warning('Please run evaluate() first')
         # allows input customized parameters
         if p is None:
             p = self.params
@@ -417,7 +420,7 @@ class COCOeval:
             'scores': scores,
         }
         toc = time.time()
-        print('DONE (t={:0.2f}s).'.format( toc-tic))
+        logger.info('DONE (t=%0.2fs).', toc-tic)
 
     def summarize(self):
         '''
@@ -426,7 +429,6 @@ class COCOeval:
         '''
         def _summarize( ap=1, iouThr=None, areaRng='all', maxDets=100 ):
             p = self.params
-            iStr = ' {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}'
             titleStr = 'Average Precision' if ap == 1 else 'Average Recall'
             typeStr = '(AP)' if ap==1 else '(AR)'
             iouStr = '{:0.2f}:{:0.2f}'.format(p.iouThrs[0], p.iouThrs[-1]) \
@@ -453,7 +455,7 @@ class COCOeval:
                 mean_s = -1
             else:
                 mean_s = np.mean(s[s>-1])
-            print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
+            logger.info(' %-18s %s @[ IoU=%-9s | area=%6s | maxDets=%3d ] = %.3f', titleStr, typeStr, iouStr, areaRng, maxDets, mean_s)
             return mean_s
         def _summarizeDets():
             stats = np.zeros((12,))
